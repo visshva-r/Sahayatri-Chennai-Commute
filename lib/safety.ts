@@ -23,7 +23,7 @@ export const SAFETY_WEIGHTS = {
 } as const;
 
 // How exposed each mode is (1 = enclosed/monitored, lower = more exposed).
-const MODE_FACTOR: Record<Mode, number> = {
+export const MODE_FACTOR: Record<Mode, number> = {
   metro: 1.0,
   rail: 0.88,
   bus: 0.86,
@@ -31,11 +31,25 @@ const MODE_FACTOR: Record<Mode, number> = {
   walk: 0.6,
 };
 
+export const MODE_EXPOSURE: Record<Mode, string> = {
+  metro: "Enclosed coaches, staff and CCTV on the corridor",
+  rail: "Suburban coaches are watched at stations but platforms vary",
+  bus: "More street-level exposure at stops and while boarding",
+  auto: "Open cabin, last-mile streets, fewer cameras",
+  walk: "Fully exposed to the street",
+};
+
 // Lighting / CCTV matter more after dark, so the time factor compounds risk.
-const TIME_FACTOR: Record<TimeOfDay, number> = {
+export const TIME_FACTOR: Record<TimeOfDay, number> = {
   day: 1.0,
   evening: 0.9,
   night: 0.8,
+};
+
+export const TIME_NOTE: Record<TimeOfDay, string> = {
+  day: "Daylight keeps the score at full strength.",
+  evening: "Evening light drops the score by about 10%.",
+  night: "After dark the score is cut by about 20%.",
 };
 
 function avg(a: number, b: number): number {

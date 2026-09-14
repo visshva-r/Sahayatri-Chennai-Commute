@@ -1,10 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sahayatri - Safe Multi-Modal Journey Planner for Chennai",
+  title: "Sahayatri — Safe multi-modal journey planner for Chennai",
   description:
-    "Compare Metro, MTC bus and last-mile options across Chennai, then pick the safest route with an AI Safe-Route Score.",
+    "Plan Metro, suburban rail, MTC bus, walk and auto in one Chennai journey. Compare time, cost and an explainable Safe-Route Score.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0B1F3A",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -97,15 +97,28 @@ export function LegList({ legs }: { legs: RouteLeg[] }) {
               <span className={`rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold ${MODE_COLOR[leg.mode]}`}>
                 {leg.line ?? MODE_LABEL[leg.mode]}
               </span>
-              <span className="text-xs font-medium text-ink">{formatDuration(leg.timeMin)}</span>
+              <span className="text-xs font-medium text-ink">{formatDuration(leg.timeMin)} ride</span>
+              {leg.waitMin > 0 && (
+                <span className="text-xs text-muted">+ {Math.round(leg.waitMin)} min wait</span>
+              )}
             </div>
             <p className="mt-1.5 text-sm text-ink">
               {leg.fromStop.name} <span className="text-muted">to</span> {leg.toStop.name}
             </p>
+            {leg.viaStops.length > 0 && (
+              <p className="mt-0.5 text-xs text-muted">
+                via {leg.viaStops.length > 3 ? `${leg.viaStops.slice(0, 2).join(", ")} +${leg.viaStops.length - 2} more` : leg.viaStops.join(", ")}
+              </p>
+            )}
             <p className="mt-0.5 text-xs text-muted">
               {leg.distanceKm.toFixed(1)} km
               {leg.costINR > 0 ? ` · ${formatINR(leg.costINR)}` : " · free"} · safety {leg.safetyScore}
             </p>
+            {i < legs.length - 1 && (
+              <p className="mt-1.5 text-[11px] font-medium text-brand">
+                Transfer at {leg.toStop.name} · then {legs[i + 1].line ?? MODE_LABEL[legs[i + 1].mode]}
+              </p>
+            )}
           </div>
         </li>
       ))}

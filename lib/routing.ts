@@ -1,5 +1,6 @@
 import type {
   Edge,
+  Mode,
   Priority,
   RouteLeg,
   RouteOption,
@@ -9,6 +10,7 @@ import { EDGES, STOPS } from "./data/chennai";
 import { legBreakdownCache, safetyBand, scoreLeg, scoreRoute } from "./safety";
 import { CAR_CO2_PER_KM, co2Leg, comfortLeg } from "./metrics";
 import { haversineKm } from "./geo";
+import { BOARD_WAIT, journeyClock } from "./eta";
 
 // Adjacency list built once at module load.
 const ADJ: Map<string, Edge[]> = (() => {
@@ -64,13 +66,24 @@ function dijkstra(
   toId: string,
   priority: Priority,
   tod: TimeOfDay,
+  bias?: Partial<Record<Mode, number>>,
+  mustUse?: Mode,
 ): Edge[] | null {
-  const START = `${fromId}::start`;
+  // State = usedFlag|stop::service. usedFlag is 1 after we ride `mustUse`.
+  const START = `0|${fromId}::start`;
   const dist = new Map<string, number>([[START, 0]]);
   const prev = new Map<string, { edge: Edge; from: string }>();
   const visited = new Set<string>();
-  const nodeOf = (state: string) => state.slice(0, state.indexOf("::"));
-  const serviceOf = (state: string) => state.slice(state.indexOf("::") + 2);
+  const usedOf = (state: string) => state[0] === "1";
+  const restOf = (state: string) => state.slice(2);
+  const nodeOf = (state: string) => {
+    const rest = restOf(state);
+    return rest.slice(0, rest.indexOf("::"));
+  };
+  const serviceOf = (state: string) => {
+    const rest = restOf(state);
+    return rest.slice(rest.indexOf("::") + 2);
+  };
 
   let goal: string | null = null;
 
@@ -84,7 +97,8 @@ function dijkstra(
       }
     }
     if (u === null) break;
-    if (nodeOf(u) === toId) {
+    const atGoal = nodeOf(u) === toId && (!mustUse || usedOf(u));
+    if (atGoal) {
       goal = u;
       break;
     }
@@ -92,10 +106,15 @@ function dijkstra(
 
     const service = serviceOf(u);
     for (const e of ADJ.get(nodeOf(u)) ?? []) {
-      const next = `${e.to}::${serviceKey(e)}`;
+      const nextUsed = usedOf(u) || e.mode === mustUse ? 1 : 0;
+      const next = `${nextUsed}|${e.to}::${serviceKey(e)}`;
       if (visited.has(next)) continue;
       const isTransfer = service !== "start" && service !== serviceKey(e);
-      const nd = best + edgeWeight(e, priority, tod) + (isTransfer ? TRANSFER_PENALTY[priority] : 0);
+      const biasMul = bias?.[e.mode] ?? 1;
+      const nd =
+        best +
+        edgeWeight(e, priority, tod) * biasMul +
+        (isTransfer ? TRANSFER_PENALTY[priority] : 0);
       if (nd < (dist.get(next) ?? Infinity)) {
         dist.set(next, nd);
         prev.set(next, { edge: e, from: u });
@@ -153,6 +172,11 @@ function edgesToLegs(edges: Edge[], tod: TimeOfDay): RouteLeg[] {
       lng: s.lng,
     }));
 
+    const viaStops = group
+      .slice(0, -1)
+      .map((e) => STOPS[e.to].name)
+      .filter((n) => n !== STOPS[first.from].name && n !== STOPS[last.to].name);
+
     const leg: RouteLeg = {
       mode: first.mode,
       line: first.line,
@@ -164,6 +188,8 @@ function edgesToLegs(edges: Edge[], tod: TimeOfDay): RouteLeg[] {
       safetyScore: Math.round(safety),
       comfortScore: Math.round(comfort),
       path,
+      viaStops,
+      waitMin: BOARD_WAIT[first.mode],
     };
     legBreakdownCache.set(leg, bAcc);
     legs.push(leg);
@@ -192,6 +218,9 @@ function buildOption(label: string, edges: Edge[], tod: TimeOfDay): RouteOption 
   const comfortScore = Math.round(Math.max(0, Math.min(100, comfortRaw - transfers * 4)));
 
   const co2Grams = Math.round(legs.reduce((s, l) => s + co2Leg(l.distanceKm, l.mode), 0));
+  const totalWaitMin = +legs.reduce((s, l) => s + l.waitMin, 0).toFixed(1);
+  const doorToDoorMin = +(totalTimeMin + totalWaitMin).toFixed(1);
+  const { departLabel, arriveLabel } = journeyClock(tod, doorToDoorMin);
 
   return {
     id: legs.map((l) => l.fromStop.id).join("-") + "-" + legs[legs.length - 1]?.toStop.id,
@@ -207,6 +236,10 @@ function buildOption(label: string, edges: Edge[], tod: TimeOfDay): RouteOption 
     comfortScore,
     co2Grams,
     co2SavedGrams: 0, // filled in by planJourney against a shared car baseline
+    totalWaitMin,
+    doorToDoorMin,
+    departLabel,
+    arriveLabel,
   };
 }
 
@@ -230,20 +263,31 @@ export function planJourney(
   priority: Priority,
   tod: TimeOfDay,
 ): RouteOption[] {
-  if (fromId === toId) return [];
+  if (!STOPS[fromId] || !STOPS[toId] || fromId === toId) return [];
   const order: Priority[] = [priority, ...ALL_PRIORITIES.filter((p) => p !== priority)];
 
   const bySig = new Map<string, { labels: string[]; edges: Edge[] }>();
-  for (const p of order) {
-    const path = dijkstra(fromId, toId, p, tod);
-    if (!path || path.length === 0) continue;
+  const remember = (path: Edge[] | null, label: string) => {
+    if (!path || path.length === 0) return;
     const sig = signature(path);
     if (bySig.has(sig)) {
-      bySig.get(sig)!.labels.push(PRIORITY_LABEL[p]);
+      const row = bySig.get(sig)!;
+      if (!row.labels.includes(label)) row.labels.push(label);
     } else {
-      bySig.set(sig, { labels: [PRIORITY_LABEL[p]], edges: path });
+      bySig.set(sig, { labels: [label], edges: path });
     }
+  };
+
+  for (const p of order) {
+    remember(dijkstra(fromId, toId, p, tod), PRIORITY_LABEL[p]);
   }
+
+  // Bias searches surface rail-heavy and bus-heavy plans that a single
+  // objective might hide (e.g. suburban via Tirusulam vs Metro Blue Line).
+  remember(dijkstra(fromId, toId, priority, tod, { rail: 0.32, walk: 0.7, auto: 0.95 }), "More rail");
+  remember(dijkstra(fromId, toId, priority, tod, { bus: 0.55, walk: 0.9 }), "More bus");
+  remember(dijkstra(fromId, toId, "fastest", tod, undefined, "rail"), "Uses rail");
+  remember(dijkstra(fromId, toId, "fastest", tod, undefined, "bus"), "Uses bus");
 
   const options = [...bySig.values()].map((v) => {
     const label = v.labels.length >= 3 ? "Best overall" : v.labels.join(" & ");
@@ -265,5 +309,5 @@ export function planJourney(
     return a.totalTimeMin - b.totalTimeMin;
   });
 
-  return options;
+  return options.slice(0, 4);
 }

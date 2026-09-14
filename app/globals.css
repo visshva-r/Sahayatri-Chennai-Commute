@@ -15,6 +15,13 @@ body {
   @apply bg-slate-50 text-ink antialiased;
 }
 
+button,
+a,
+input,
+select {
+  touch-action: manipulation;
+}
+
 .leaflet-container {
   width: 100%;
   height: 100%;

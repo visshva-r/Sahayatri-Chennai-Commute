@@ -34,6 +34,7 @@ export function JourneyForm({
   const [priority, setPriority] = useState<Priority>(initial?.priority ?? "fastest");
   const [tod, setTod] = useState<TimeOfDay>(initial?.tod ?? "day");
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
   const swap = () => {
     setFrom(to);
@@ -47,6 +48,7 @@ export function JourneyForm({
       return;
     }
     setError(null);
+    setPending(true);
     router.push(`/results?from=${from}&to=${to}&priority=${priority}&tod=${tod}`);
     onNavigate?.();
   };
@@ -119,9 +121,10 @@ export function JourneyForm({
 
       <button
         type="submit"
-        className="mt-4 w-full rounded-xl bg-navy py-3 text-sm font-semibold text-white transition hover:bg-navy/90"
+        disabled={pending}
+        className="mt-4 min-h-[48px] w-full rounded-xl bg-navy py-3 text-sm font-semibold text-white transition hover:bg-navy/90 disabled:opacity-60"
       >
-        Plan my journey
+        {pending ? "Planning..." : "Plan my journey"}
       </button>
     </form>
   );

@@ -59,6 +59,10 @@ export interface RouteLeg {
   safetyScore: number;
   comfortScore: number;
   path: LatLng[];
+  /** Intermediate stop names on a merged line (for step-by-step). */
+  viaStops: string[];
+  /** Typical boarding / transfer wait for this mode, in minutes. */
+  waitMin: number;
 }
 
 export interface RouteOption {
@@ -75,6 +79,12 @@ export interface RouteOption {
   comfortScore: number;
   co2Grams: number;
   co2SavedGrams: number;
+  /** Sum of boarding / transfer waits. */
+  totalWaitMin: number;
+  /** Ride time + waits (what ETA uses). */
+  doorToDoorMin: number;
+  departLabel: string;
+  arriveLabel: string;
 }
 
 export interface PlanRequest {

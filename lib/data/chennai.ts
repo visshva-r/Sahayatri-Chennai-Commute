@@ -36,7 +36,7 @@ interface StopSeed {
 
 const STOP_SEEDS: StopSeed[] = [
   // Metro Blue line (Airport -> Central)
-  { id: "airport", name: "Chennai Airport", lat: 12.9815, lng: 80.1628, zoneId: "airport", modes: ["metro", "auto"] },
+  { id: "airport", name: "Chennai Airport", lat: 12.9815, lng: 80.1628, zoneId: "airport", modes: ["metro", "auto", "bus"] },
   { id: "meenambakkam", name: "Meenambakkam", lat: 12.9905, lng: 80.1719, zoneId: "airport", modes: ["metro"] },
   { id: "nanganallur", name: "Nanganallur Road", lat: 12.9899, lng: 80.1869, zoneId: "airport", modes: ["metro"] },
   { id: "alandur", name: "Alandur", lat: 12.9971, lng: 80.2002, zoneId: "guindy", modes: ["metro", "bus"] },
@@ -71,6 +71,12 @@ const STOP_SEEDS: StopSeed[] = [
   { id: "indiranagar", name: "Indira Nagar", lat: 12.9955, lng: 80.2565, zoneId: "adyar", modes: ["rail"] },
   { id: "velachery", name: "Velachery", lat: 12.9792, lng: 80.2205, zoneId: "velachery", modes: ["rail", "bus", "auto"] },
 
+  // Beach–Tambaram suburban (coarse spine: airport area → Mount → Mambalam → Park)
+  { id: "tirusulam", name: "Tirusulam", lat: 12.982, lng: 80.1645, zoneId: "airport", modes: ["rail"] },
+  { id: "stthomas", name: "St. Thomas Mount", lat: 13.0051, lng: 80.1965, zoneId: "guindy", modes: ["rail"] },
+  { id: "mambalam", name: "Mambalam", lat: 13.0335, lng: 80.221, zoneId: "tnagar", modes: ["rail"] },
+  { id: "park", name: "Park Station", lat: 13.0808, lng: 80.2758, zoneId: "central", modes: ["rail"] },
+
   // Bus / last-mile only neighbourhoods (no metro)
   { id: "tnagar", name: "T. Nagar (Panagal Park)", lat: 13.0418, lng: 80.2341, zoneId: "tnagar", modes: ["bus", "auto"] },
   { id: "adyar", name: "Adyar Depot", lat: 13.0012, lng: 80.2565, zoneId: "adyar", modes: ["bus", "auto"] },
@@ -104,6 +110,12 @@ const RAIL_LINE: Seg[] = [
   ["kotturpuram", "indiranagar"], ["indiranagar", "velachery"],
 ];
 
+const SUBURBAN_LINE: Seg[] = [
+  ["tirusulam", "stthomas"],
+  ["stthomas", "mambalam"],
+  ["mambalam", "park"],
+];
+
 // MTC bus corridors (id -> ordered stops)
 const BUS_ROUTES: Record<string, string[]> = {
   "21G": ["saidapet", "tnagar", "teynampet", "nandanam"],
@@ -112,6 +124,8 @@ const BUS_ROUTES: Record<string, string[]> = {
   "M51": ["koyambedu", "vadapalani", "tnagar", "saidapet"],
   "5C": ["tnagar", "teynampet", "central"],
   "29C": ["adyar", "greenways", "mandaveli", "mylapore"],
+  "70A": ["airport", "guindy", "saidapet", "tnagar"],
+  "M19": ["velachery", "adyar", "tnagar"],
 };
 
 // Walk / auto transfers between nearby points (kept short + realistic)
@@ -119,6 +133,10 @@ const WALK_LINKS: Seg[] = [
   ["nandanam", "tnagar"],
   ["teynampet", "tnagar"],
   ["central", "egmore"],
+  ["airport", "tirusulam"],
+  ["alandur", "stthomas"],
+  ["tnagar", "mambalam"],
+  ["central", "park"],
 ];
 const AUTO_LINKS: Seg[] = [
   ["adyar", "besantnagar"],
@@ -127,6 +145,8 @@ const AUTO_LINKS: Seg[] = [
   ["koyambedu", "annanagar_east"],
   ["velachery", "guindy"],
   ["mylapore", "teynampet"],
+  ["mylapore", "tnagar"],
+  ["airport", "guindy"],
 ];
 
 // --- edge construction ---------------------------------------------------- //
@@ -171,6 +191,7 @@ function buildEdges(): Edge[] {
   addBidirectional(edges, BLUE_LINE, "metro", "Blue Line");
   addBidirectional(edges, GREEN_LINE, "metro", "Green Line");
   addBidirectional(edges, RAIL_LINE, "rail", "MRTS");
+  addBidirectional(edges, SUBURBAN_LINE, "rail", "Suburban");
   for (const [route, stops] of Object.entries(BUS_ROUTES)) {
     const segs: Seg[] = [];
     for (let i = 0; i < stops.length - 1; i++) segs.push([stops[i], stops[i + 1]]);

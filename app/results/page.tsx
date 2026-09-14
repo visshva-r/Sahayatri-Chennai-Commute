@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { SiteHeader } from "@/components/Brand";
 import { ResultsView } from "@/components/ResultsView";
+import { EmptyState } from "@/components/EmptyState";
 import { getStop } from "@/lib/data/chennai";
 import { planJourney } from "@/lib/routing";
 import type { Priority, TimeOfDay } from "@/lib/types";
@@ -13,31 +13,59 @@ function pick<T extends string>(v: string | string[] | undefined, allowed: T[], 
   return allowed.includes(s as T) ? (s as T) : fallback;
 }
 
+function first(v: string | string[] | undefined): string {
+  return (Array.isArray(v) ? v[0] : v) ?? "";
+}
+
 export default function ResultsPage({
   searchParams,
 }: {
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const fromId = (Array.isArray(searchParams.from) ? searchParams.from[0] : searchParams.from) ?? "";
-  const toId = (Array.isArray(searchParams.to) ? searchParams.to[0] : searchParams.to) ?? "";
+  const fromId = first(searchParams.from);
+  const toId = first(searchParams.to);
   const priority = pick<Priority>(searchParams.priority, PRIORITIES, "fastest");
   const timeOfDay = pick<TimeOfDay>(searchParams.tod, TIMES, "day");
-  const query = Array.isArray(searchParams.q) ? searchParams.q[0] : searchParams.q;
+  const query = first(searchParams.q) || undefined;
+  const presetId = first(searchParams.preset) || undefined;
 
   const fromStop = getStop(fromId);
   const toStop = getStop(toId);
+
+  if (!fromId || !toId) {
+    return (
+      <main className="min-h-screen">
+        <SiteHeader />
+        <EmptyState
+          title="Pick your stops"
+          body="Start a journey from the home page, or tap a Chennai demo commute."
+          actionLabel="Open planner"
+        />
+      </main>
+    );
+  }
 
   if (!fromStop || !toStop) {
     return (
       <main className="min-h-screen">
         <SiteHeader />
-        <div className="mx-auto max-w-md px-4 py-20 text-center">
-          <p className="text-lg font-semibold text-navy">Pick your stops</p>
-          <p className="mt-2 text-sm text-muted">Start a journey from the home page to see route options.</p>
-          <Link href="/" className="mt-6 inline-block rounded-xl bg-navy px-5 py-2.5 text-sm font-semibold text-white">
-            Go to planner
-          </Link>
-        </div>
+        <EmptyState
+          title="Unknown stop"
+          body="That origin or destination is not on the seeded Chennai network."
+          actionLabel="Choose a listed stop"
+        />
+      </main>
+    );
+  }
+
+  if (fromId === toId) {
+    return (
+      <main className="min-h-screen">
+        <SiteHeader />
+        <EmptyState
+          title="Same origin and destination"
+          body="Pick two different stops to plan a journey."
+        />
       </main>
     );
   }
@@ -45,7 +73,7 @@ export default function ResultsPage({
   const options = planJourney(fromId, toId, priority, timeOfDay);
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen pb-8">
       <SiteHeader />
       <ResultsView
         options={options}
@@ -53,6 +81,7 @@ export default function ResultsPage({
         fromName={fromStop.name}
         toName={toStop.name}
         query={query}
+        presetId={presetId}
       />
     </main>
   );

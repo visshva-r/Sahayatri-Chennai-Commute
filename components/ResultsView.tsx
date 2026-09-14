@@ -5,21 +5,33 @@ import { useEffect, useMemo, useState } from "react";
 import type { PlanRequest, RouteOption } from "@/lib/types";
 import { RouteCard, LegList } from "./RouteCard";
 import { CompanionMode } from "./CompanionMode";
-import { ScoreRing, SafetyBreakdownBars, bandColor, safetyVerdict } from "./SafetyMeter";
 import { JourneyForm } from "./JourneyForm";
 import { AssistantBox } from "./AssistantBox";
-import { PinIcon, ComfortIcon, LeafIcon, ClockIcon, RupeeIcon, TransferIcon, SparkleIcon, InfoIcon } from "./icons";
+import { ComparePanel } from "./ComparePanel";
+import { SafetyExplain } from "./SafetyExplain";
+import { SafetyKit } from "./SafetyKit";
+import { EmptyState } from "./EmptyState";
+import { TOD_LABEL } from "@/lib/explain";
+import { getPreset } from "@/lib/presets";
+import {
+  PinIcon,
+  ComfortIcon,
+  LeafIcon,
+  ClockIcon,
+  RupeeIcon,
+  TransferIcon,
+  SparkleIcon,
+  CompareIcon,
+} from "./icons";
 
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm text-muted">
+    <div className="flex h-full min-h-[16rem] w-full items-center justify-center bg-slate-100 text-sm text-muted">
       Loading map...
     </div>
   ),
 });
-
-const TOD_LABEL = { day: "Daytime", evening: "Evening", night: "Night" } as const;
 
 export function ResultsView({
   options,
@@ -27,26 +39,28 @@ export function ResultsView({
   fromName,
   toName,
   query,
+  presetId,
 }: {
   options: RouteOption[];
   request: PlanRequest;
   fromName: string;
   toName: string;
   query?: string;
+  presetId?: string;
 }) {
   const [selectedId, setSelectedId] = useState(options[0]?.id ?? "");
   const [companionActive, setCompanionActive] = useState(false);
   const [progress, setProgress] = useState(0);
   const [deviation, setDeviation] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [safetyInfoOpen, setSafetyInfoOpen] = useState(false);
+  const [view, setView] = useState<"routes" | "compare">("routes");
 
-  // When a new search loads (new options), reset selection to the top route.
   useEffect(() => {
     setSelectedId(options[0]?.id ?? "");
     setCompanionActive(false);
     setProgress(0);
     setDeviation(false);
+    setView("routes");
   }, [options]);
 
   const selected = useMemo(
@@ -76,6 +90,7 @@ export function ResultsView({
     setCompanionActive(false);
     setProgress(0);
     setDeviation(false);
+    setView("routes");
   };
 
   const toggleCompanion = () => {
@@ -91,19 +106,19 @@ export function ResultsView({
 
   if (!selected) {
     return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <p className="text-lg font-semibold text-navy">No route found</p>
-        <p className="mt-2 text-sm text-muted">
-          We could not connect {fromName} and {toName}. Try a different pair of stops.
-        </p>
-        <div className="mt-6 text-left">
-          <JourneyForm compact initial={{ from: request.fromId, to: request.toId, priority: request.priority, tod: request.timeOfDay }} />
-        </div>
-      </div>
+      <EmptyState
+        title="No route found"
+        body={`We could not connect ${fromName} and ${toName} on the seeded network. Try another pair or a demo preset.`}
+        actionLabel="Try a demo commute"
+        actionHref="/#presets"
+      >
+        <JourneyForm
+          compact
+          initial={{ from: request.fromId, to: request.toId, priority: request.priority, tod: request.timeOfDay }}
+        />
+      </EmptyState>
     );
   }
-
-  const c = bandColor(selected.safetyBand);
 
   const PRIORITY_LABEL = {
     fastest: "Fastest",
@@ -112,8 +127,15 @@ export function ResultsView({
     safest: "Safest",
   } as const;
 
+  const preset = getPreset(presetId);
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
+      {preset && (
+        <div className="mb-4 rounded-xl border border-brand/20 bg-brand/5 px-3 py-2 text-sm text-navy">
+          <span className="font-semibold">{preset.kicker}:</span> {preset.blurb}
+        </div>
+      )}
       {query && (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-teal/30 bg-teal/5 px-3 py-2 text-sm">
           <SparkleIcon className="w-4 h-4 text-teal" />
@@ -129,8 +151,8 @@ export function ResultsView({
         </div>
       )}
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-2 pt-1 text-sm">
-          <PinIcon className="w-4 h-4 text-navy" />
+        <div className="flex min-w-0 flex-wrap items-center gap-2 pt-1 text-sm">
+          <PinIcon className="w-4 h-4 shrink-0 text-navy" />
           <span className="font-semibold text-navy">{fromName}</span>
           <span className="text-muted">to</span>
           <span className="font-semibold text-navy">{toName}</span>
@@ -138,143 +160,139 @@ export function ResultsView({
             {TOD_LABEL[request.timeOfDay]}
           </span>
         </div>
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setEditOpen((o) => !o)}
-            className="cursor-pointer select-none rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-slate-50"
-          >
-            Edit journey
-          </button>
-          {editOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setEditOpen(false)} aria-hidden />
-              <div className="absolute right-0 z-20 mt-2 w-[min(92vw,420px)] space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
-                <AssistantBox tone="light" compact onNavigate={() => setEditOpen(false)} />
-                <div className="flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted">
-                  <span className="h-px flex-1 bg-slate-200" />
-                  or set it manually
-                  <span className="h-px flex-1 bg-slate-200" />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-lg border border-slate-200 p-0.5">
+            <button
+              type="button"
+              onClick={() => setView("routes")}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold ${
+                view === "routes" ? "bg-navy text-white" : "text-muted hover:text-navy"
+              }`}
+            >
+              Routes
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("compare")}
+              className={`inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold ${
+                view === "compare" ? "bg-navy text-white" : "text-muted hover:text-navy"
+              }`}
+            >
+              <CompareIcon className="h-3.5 w-3.5" />
+              Compare
+            </button>
+          </div>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setEditOpen((o) => !o)}
+              className="cursor-pointer select-none rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-ink transition hover:bg-slate-50"
+            >
+              Edit journey
+            </button>
+            {editOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setEditOpen(false)} aria-hidden />
+                <div className="absolute right-0 z-20 mt-2 w-[min(92vw,420px)] space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
+                  <AssistantBox tone="light" compact onNavigate={() => setEditOpen(false)} />
+                  <div className="flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted">
+                    <span className="h-px flex-1 bg-slate-200" />
+                    or set it manually
+                    <span className="h-px flex-1 bg-slate-200" />
+                  </div>
+                  <JourneyForm
+                    compact
+                    initial={{ from: request.fromId, to: request.toId, priority: request.priority, tod: request.timeOfDay }}
+                    onNavigate={() => setEditOpen(false)}
+                  />
                 </div>
-                <JourneyForm
-                  compact
-                  initial={{ from: request.fromId, to: request.toId, priority: request.priority, tod: request.timeOfDay }}
-                  onNavigate={() => setEditOpen(false)}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {view === "compare" ? (
+        <ComparePanel
+          options={options}
+          selectedId={selected.id}
+          priority={request.priority}
+          onSelect={selectRoute}
+        />
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-[370px_1fr]">
+          <div className="space-y-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              {options.length} route {options.length === 1 ? "option" : "options"}
+            </p>
+            {options.map((o, i) => (
+              <RouteCard
+                key={o.id}
+                option={o}
+                selected={o.id === selected.id}
+                recommended={i === 0}
+                greenest={o.id === greenestId}
+                onSelect={() => selectRoute(o.id)}
+              />
+            ))}
+          </div>
+
+          <div className="space-y-5">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-card">
+              <div className="h-72 w-full sm:h-80">
+                <MapView legs={selected.legs} progress={companionActive ? progress : undefined} />
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-medium text-muted">
+                Leave {selected.departLabel} · Arrive {selected.arriveLabel}
+              </p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <StatPill icon={<ClockIcon className="w-4 h-4" />} label="Travel time" value={`${Math.round(selected.totalTimeMin)} min`} />
+                <StatPill icon={<RupeeIcon className="w-4 h-4" />} label="Fare" value={`₹${selected.totalCostINR}`} />
+                <StatPill icon={<ComfortIcon className="w-4 h-4" />} label="Comfort" value={`${selected.comfortScore}/100`} />
+                <StatPill
+                  icon={<LeafIcon className="w-4 h-4" />}
+                  label="CO2 saved vs car"
+                  value={`${(selected.co2SavedGrams / 1000).toFixed(1)} kg`}
+                  green
                 />
               </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-[370px_1fr]">
-        <div className="space-y-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">
-            {options.length} route {options.length === 1 ? "option" : "options"}
-          </p>
-          {options.map((o, i) => (
-            <RouteCard
-              key={o.id}
-              option={o}
-              selected={o.id === selected.id}
-              recommended={i === 0}
-              greenest={o.id === greenestId}
-              onSelect={() => selectRoute(o.id)}
-            />
-          ))}
-        </div>
-
-        <div className="space-y-5">
-          <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-card">
-            <div className="h-72 w-full sm:h-80">
-              <MapView legs={selected.legs} progress={companionActive ? progress : undefined} />
-            </div>
-          </div>
-
-          <div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <StatPill icon={<ClockIcon className="w-4 h-4" />} label="Travel time" value={`${Math.round(selected.totalTimeMin)} min`} />
-              <StatPill icon={<RupeeIcon className="w-4 h-4" />} label="Fare" value={`₹${selected.totalCostINR}`} />
-              <StatPill icon={<ComfortIcon className="w-4 h-4" />} label="Comfort" value={`${selected.comfortScore}/100`} />
-              <StatPill
-                icon={<LeafIcon className="w-4 h-4" />}
-                label="CO2 saved vs car"
-                value={`${(selected.co2SavedGrams / 1000).toFixed(1)} kg`}
-                green
-              />
-            </div>
-            <p className="mt-2 flex items-center gap-1.5 text-xs text-muted">
-              <TransferIcon className="w-3.5 h-3.5" />
-              {selected.transfers} {selected.transfers === 1 ? "transfer" : "transfers"} · {selected.totalDistanceKm.toFixed(1)} km total
-            </p>
-          </div>
-
-          <div className="grid gap-5 xl:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
-              <h3 className="mb-3 text-sm font-semibold text-navy">Step by step</h3>
-              <LegList legs={selected.legs} />
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
-              <div className="mb-3 flex items-center gap-3">
-                <ScoreRing score={selected.safetyScore} band={selected.safetyBand} size={64} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="text-sm font-semibold text-navy">Safe-Route Score</h3>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setSafetyInfoOpen((o) => !o)}
-                        className="flex h-5 w-5 items-center justify-center rounded-full text-muted transition hover:bg-slate-100 hover:text-navy"
-                        aria-label="How the Safe-Route Score works"
-                      >
-                        <InfoIcon className="h-4 w-4" />
-                      </button>
-                      {safetyInfoOpen && (
-                        <>
-                          <div className="fixed inset-0 z-10" onClick={() => setSafetyInfoOpen(false)} aria-hidden />
-                          <div className="absolute left-0 top-7 z-20 w-72 rounded-xl border border-slate-200 bg-white p-3 text-left shadow-lg">
-                            <p className="mb-2 text-xs font-semibold text-navy">How it&rsquo;s scored</p>
-                            <p className="mb-2 text-[11px] leading-relaxed text-muted">
-                              A 0&ndash;100 score from five signals, weighted by how much each affects real safety:
-                            </p>
-                            <ul className="space-y-1 text-[11px] text-ink">
-                              <li className="flex justify-between"><span>Women&rsquo;s safety feedback</span><span className="font-semibold">30%</span></li>
-                              <li className="flex justify-between"><span>Street lighting</span><span className="font-semibold">22%</span></li>
-                              <li className="flex justify-between"><span>CCTV coverage</span><span className="font-semibold">18%</span></li>
-                              <li className="flex justify-between"><span>Footfall</span><span className="font-semibold">15%</span></li>
-                              <li className="flex justify-between"><span>Help points</span><span className="font-semibold">15%</span></li>
-                            </ul>
-                            <p className="mt-2 text-[11px] leading-relaxed text-muted">
-                              Then adjusted for how exposed your mode is (a metro coach beats a walk) and the time of day (lower after dark), and time-weighted across every leg.
-                            </p>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <span className={`mt-1 inline-block rounded-full border px-2 py-0.5 text-[11px] font-semibold ${c.bg} ${c.text} ${c.border}`}>
-                    {selected.safetyBand}
-                  </span>
-                </div>
-              </div>
-              <p className="mb-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-ink">
-                {safetyVerdict(selected.breakdown)}
+              <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+                <TransferIcon className="w-3.5 h-3.5" />
+                {selected.transfers} {selected.transfers === 1 ? "transfer" : "transfers"} · {selected.totalDistanceKm.toFixed(1)} km
+                · {Math.round(selected.totalWaitMin)} min typical waits
+                · {Math.round(selected.doorToDoorMin)} min door to door
               </p>
-              <SafetyBreakdownBars breakdown={selected.breakdown} />
             </div>
-          </div>
 
-          <CompanionMode
-            option={selected}
-            active={companionActive}
-            progress={progress}
-            deviation={deviation}
-            onToggle={toggleCompanion}
-            onSimulateDeviation={() => setDeviation(true)}
-          />
+            <div className="grid gap-5 xl:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
+                <h3 className="mb-3 text-sm font-semibold text-navy">Step by step</h3>
+                <LegList legs={selected.legs} />
+              </div>
+              <SafetyExplain option={selected} timeOfDay={request.timeOfDay} />
+            </div>
+
+            <CompanionMode
+              option={selected}
+              active={companionActive}
+              progress={progress}
+              deviation={deviation}
+              onToggle={toggleCompanion}
+              onSimulateDeviation={() => setDeviation(true)}
+            />
+
+            <SafetyKit
+              fromName={fromName}
+              toName={toName}
+              option={selected}
+              timeOfDay={request.timeOfDay}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

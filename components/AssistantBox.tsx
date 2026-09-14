@@ -8,6 +8,7 @@ const EXAMPLES = [
   "Cheapest safe way from Guindy to Anna Nagar after 9pm",
   "Fastest from Airport to Central",
   "Comfortable ride from Velachery to T Nagar",
+  "Safest from Adyar to Koyambedu in the evening",
 ];
 
 export function AssistantBox({
@@ -65,8 +66,13 @@ export function AssistantBox({
       <div className={`mb-2 flex items-center gap-2 text-sm font-medium ${dark ? "text-white" : "text-navy"}`}>
         <SparkleIcon className="w-4 h-4 text-teal" />
         Ask in plain language
-        <span className="rounded-full bg-teal/20 px-2 py-0.5 text-[10px] font-semibold text-teal">AI</span>
+        <span className="rounded-full bg-teal/20 px-2 py-0.5 text-[10px] font-semibold text-teal">Optional</span>
       </div>
+      {!compact && (
+        <p className={`mb-2 text-[11px] ${dark ? "text-white/55" : "text-muted"}`}>
+          Gemini if a key is set — otherwise the built-in parser. The planner never depends on it.
+        </p>
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();

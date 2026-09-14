@@ -99,7 +99,7 @@ export default function MapView({ legs, progress }: { legs: RouteLeg[]; progress
     if (typeof progress === "number" && all.length > 1) {
       const idx = Math.min(all.length - 1, Math.max(0, Math.round(progress * (all.length - 1))));
       const here = all[idx];
-      L.marker(here, { icon: dotIcon(L, "#DC2626") }).bindPopup("Live position").addTo(group);
+      L.marker(here, { icon: dotIcon(L, "#DC2626") }).bindPopup("Demo position (simulated)").addTo(group);
     }
 
     const bounds = all as LatLngBoundsExpression;

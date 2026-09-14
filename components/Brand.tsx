@@ -23,10 +23,18 @@ export function SiteHeader() {
             <div className="text-[11px] text-muted">Every mode. One journey. Safer commutes.</div>
           </div>
         </Link>
-        <div className="hidden items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-muted sm:flex">
-          <span className="h-2 w-2 rounded-full bg-teal" />
-          Chennai Pilot
-        </div>
+        <nav className="flex items-center gap-3 text-xs font-medium text-muted">
+          <Link href="/#presets" className="hidden hover:text-navy sm:inline">
+            Demo commutes
+          </Link>
+          <Link href="/#how" className="hidden hover:text-navy sm:inline">
+            How it works
+          </Link>
+          <div className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5">
+            <span className="h-2 w-2 rounded-full bg-teal" />
+            Chennai
+          </div>
+        </nav>
       </div>
     </header>
   );

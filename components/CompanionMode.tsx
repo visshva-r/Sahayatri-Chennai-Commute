@@ -31,8 +31,7 @@ export function CompanionMode({
   const [contact, setContact] = useState("Amma");
   const [phone, setPhone] = useState("+91 98765 43210");
 
-  const remaining = formatDuration(option.totalTimeMin * (1 - progress));
-  const tripId = option.id.slice(0, 6).replace(/[^a-z0-9]/gi, "").toLowerCase() || "trip01";
+  const remaining = formatDuration(option.doorToDoorMin * (1 - progress));
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
@@ -42,8 +41,10 @@ export function CompanionMode({
             <ShieldIcon className="w-4 h-4" />
           </span>
           <div>
-            <h3 className="text-sm font-semibold text-navy">Companion Mode</h3>
-            <p className="text-[11px] text-muted">Share your live trip with someone you trust.</p>
+            <h3 className="text-sm font-semibold text-navy">Companion briefing</h3>
+            <p className="text-[11px] text-muted">
+              A demo walkthrough of trip sharing — not live GPS tracking.
+            </p>
           </div>
         </div>
         <span
@@ -73,47 +74,49 @@ export function CompanionMode({
       </div>
 
       <button
+        type="button"
         onClick={onToggle}
         className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition ${
           active ? "bg-slate-100 text-ink hover:bg-slate-200" : "bg-teal text-white hover:bg-teal/90"
         }`}
       >
         <ShareIcon className="w-4 h-4" />
-        {active ? "Stop sharing" : "Start sharing trip"}
+        {active ? "Stop demo walkthrough" : "Play demo walkthrough"}
       </button>
 
       {active && (
         <div className="mt-3 space-y-3">
           <div className="rounded-xl bg-slate-50 p-3 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-muted">Live link sent to {contact}</span>
-              <span className="font-medium text-brand">sahayatri.app/t/{tripId}</span>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted">Simulated progress for {contact}</span>
+              <span className="font-medium text-brand">Demo only</span>
             </div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
               <div className="h-full rounded-full bg-teal transition-all" style={{ width: `${Math.round(progress * 100)}%` }} />
             </div>
             <div className="mt-1.5 flex items-center justify-between text-muted">
               <span className="flex items-center gap-1">
-                <PinIcon className="w-3.5 h-3.5" /> {Math.round(progress * 100)}% of route
+                <PinIcon className="w-3.5 h-3.5" /> {Math.round(progress * 100)}% of route (simulated)
               </span>
               <span>ETA {remaining}</span>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onSimulateDeviation}
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-amber-300 bg-amber-50 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-100"
           >
             <AlertIcon className="w-4 h-4" />
-            Simulate off-route deviation
+            Simulate an off-route alert
           </button>
 
           {deviation && (
             <div className="flex items-start gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700">
               <AlertIcon className="mt-0.5 w-4 h-4 shrink-0" />
               <span>
-                Route deviation detected near {option.legs[0]?.toStop.name}. Alert and live location
-                sent to {contact} ({phone}).
+                Demo: a deviation near {option.legs[0]?.toStop.name} would notify {contact} ({phone}).
+                No message is sent from this app.
               </span>
             </div>
           )}

@@ -19,6 +19,12 @@ const MANUAL_ALIASES: Record<string, string[]> = {
   adyar: ["adyar"],
   besantnagar: ["besant nagar", "besantnagar"],
   agdms: ["ag dms", "agdms"],
+  tirusulam: ["tirusulam", "tirusoolam"],
+  stthomas: ["st thomas mount", "st thomas"],
+  mambalam: ["mambalam"],
+  park: ["park station"],
+  velachery: ["velachery"],
+  guindy: ["guindy"],
 };
 
 interface AliasEntry {

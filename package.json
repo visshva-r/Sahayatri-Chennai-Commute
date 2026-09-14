@@ -1,8 +1,8 @@
 {
   "name": "sahayatri",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Sahayatri - AI multi-modal journey planner with a Safe-Route Score for Chennai.",
+  "description": "Sahayatri — multi-modal Chennai journey planner with an explainable Safe-Route Score.",
   "scripts": {
     "dev": "node node_modules/next/dist/bin/next dev",
     "build": "node node_modules/next/dist/bin/next build",
