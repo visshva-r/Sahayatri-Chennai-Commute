@@ -6,7 +6,7 @@ Sahayatri is a Chennai multi-modal journey planner. It stitches Metro, MRTS, sub
 
 **Live:** [https://sahayatri-chennai-commute.vercel.app](https://sahayatri-chennai-commute.vercel.app/)
 
-The planner is deterministic and works with **no API keys**. Gemini is optional for the plain-language box and never blocks a demo.
+This is a **frontend product**: React UI, client state, and a Leaflet map. Route options are computed in the same Next.js app from a **seeded Chennai network** (not a live transit feed). There is no live GPS, no emergency dispatch, and no model running in the request path. Gemini is optional for the plain-language box and is not required for the demo.
 
 ![Sahayatri home](docs/screenshots/home.png)
 
@@ -66,7 +66,7 @@ legScore = legBase × modeFactor × timeFactor × 100
 - **timeFactor:** day `1.0`, evening `0.9`, night `0.8`.
 - Route score = **time-weighted average** of legs. Bands: `≥72 Safe`, `≥52 Moderate`, else `Caution`.
 
-Weights are calibrated offline in `ml/safe_route_model.py` (linear recovery + Random Forest check). Production labels would come from incidents + rider feedback; the script uses a reproducible synthetic set.
+The numbers the UI shows are this weighted formula, computed before render. An offline notebook in `ml/` only checks that the weights are recoverable from a synthetic set. It is not part of the website.
 
 ```bash
 cd ml
@@ -168,14 +168,23 @@ Redeploy after pushing: Vercel builds `main` automatically if the project is con
 
 ---
 
+## Frontend notes
+
+What is actually on screen, and how to talk about it:
+
+1. **Journey state.** The results view keeps `selectedId` and a routes/compare toggle in React state. Selection resets only when the journey key changes (origin, destination, priority, time, or the set of plan ids) — not on every parent render.
+2. **Derived selection.** The open route is `options.find(id) ?? options[0]`. Compare writes the same `selectedId`, then the map, steps, and score panel all read that one object.
+3. **Map lifecycle.** Leaflet is loaded with `next/dynamic` and `ssr: false`. The map instance lives in a ref, is destroyed on unmount, and calls `invalidateSize` from a `ResizeObserver` so mobile rotation and the first layout do not leave a grey tile.
+4. **Map gestures.** The route is fit once per path. A simulated companion dot updates without calling `fitBounds` again, so panning is not stolen. `touch-action: none` on the map container lets the finger drag the map instead of scrolling the page. The legend sits bottom-left, clear of the zoom control.
+5. **Scoring UI.** The Safe-Route panel is a view of data already on the route: a headline, five factor cards (score, strong/ok/weak, weight, corridor evidence), and the time-of-day note. The info control only reveals the formula. Nothing in that panel calls a backend.
+
 ## Stack
 
 - Next.js 14 (App Router), React 18, TypeScript
 - Tailwind CSS
 - Leaflet + CARTO / OpenStreetMap tiles (no map key)
-- Custom multi-modal graph + Dijkstra
-- Gemini 2.5 Flash (optional) + offline fallback
-- scikit-learn calibration script (offline)
+- Seeded multi-modal graph + Dijkstra, run in the Next.js server for `/results` and `/api/plan` (same function the UI renders)
+- Optional Gemini parse for the text box, with an offline fallback
 
 ---
 

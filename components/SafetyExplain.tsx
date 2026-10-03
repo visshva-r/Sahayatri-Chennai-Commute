@@ -29,7 +29,8 @@ export function SafetyExplain({ option, timeOfDay }: { option: RouteOption; time
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
-              className="flex h-5 w-5 items-center justify-center rounded-full text-muted transition hover:bg-slate-100 hover:text-navy"
+              aria-expanded={open}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition hover:bg-slate-100 hover:text-navy"
               aria-label="How the Safe-Route Score is calculated"
             >
               <InfoIcon className="h-4 w-4" />
@@ -38,13 +39,13 @@ export function SafetyExplain({ option, timeOfDay }: { option: RouteOption; time
           <span className={`mt-1 inline-block rounded-full border px-2 py-0.5 text-[11px] font-semibold ${c.bg} ${c.text} ${c.border}`}>
             {option.safetyBand}
           </span>
-          <p className="mt-2 text-xs leading-relaxed text-ink">{why.headline}</p>
+          <p className="mt-2 text-sm leading-relaxed text-ink">{why.headline}</p>
         </div>
       </div>
 
-      {open && (
-        <p className="mb-3 rounded-lg bg-slate-50 px-3 py-2 text-[11px] leading-relaxed text-muted">{why.formula}</p>
-      )}
+      <p className="mb-3 rounded-lg bg-slate-50 px-3 py-2 text-[11px] leading-relaxed text-muted">
+        {open ? why.formula : "Five signals, then adjusted for how exposed the mode is and the time of day. The longest leg counts the most."}
+      </p>
 
       <ul className="mb-3 space-y-1.5 text-xs text-ink">
         {why.bullets.map((b) => (
@@ -61,7 +62,7 @@ export function SafetyExplain({ option, timeOfDay }: { option: RouteOption; time
             <div className="flex items-start justify-between gap-2">
               <p className="text-xs font-semibold text-navy">{f.label}</p>
               <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${VERDICT_TONE[f.verdict]}`}>
-                {f.weightPct}%
+                {f.verdict}
               </span>
             </div>
             <div className="mt-2 flex items-center gap-2">
@@ -76,7 +77,7 @@ export function SafetyExplain({ option, timeOfDay }: { option: RouteOption; time
               <span className="w-7 text-right text-xs font-semibold text-ink">{f.score}</span>
             </div>
             <p className="mt-2 text-[11px] leading-relaxed text-ink">{f.evidence}</p>
-            {open && <p className="mt-1 text-[11px] text-muted">{f.why}</p>}
+            <p className="mt-1 text-[11px] text-muted">Weight {f.weightPct}%{open ? `. ${f.why}` : ""}</p>
           </article>
         ))}
       </div>

@@ -152,9 +152,14 @@ export function explainWhy(
   const because = whyBits.length ? ` because of ${whyBits.join(", ")}` : "";
   const headline = `${option.safetyScore} ${option.safetyBand}${because}.`;
 
+  const modeName = `${exposed[0].toUpperCase()}${exposed.slice(1)}`;
+  const onlyMode = option.legs.every((leg) => leg.mode === exposed);
+  const modeLine = onlyMode
+    ? `This plan is ${modeName} only. ${MODE_EXPOSURE[exposed]}.`
+    : `${modeName} is the most exposed mode on this plan. ${MODE_EXPOSURE[exposed]}.`;
   const bullets = [
     TIME_NOTE[tod],
-    `${exposed[0].toUpperCase()}${exposed.slice(1)} is the most exposed mode on this plan. ${MODE_EXPOSURE[exposed]}.`,
+    modeLine,
     `${strong.label} is the strongest signal (${strong.score}/100). ${weak.label} is the weakest (${weak.score}/100).`,
   ];
   if (long) {

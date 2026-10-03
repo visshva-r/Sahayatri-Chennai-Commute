@@ -55,13 +55,17 @@ export function ResultsView({
   const [editOpen, setEditOpen] = useState(false);
   const [view, setView] = useState<"routes" | "compare">("routes");
 
+  const journeyKey = `${request.fromId}|${request.toId}|${request.priority}|${request.timeOfDay}|${options.map((o) => o.id).join(",")}`;
+
   useEffect(() => {
     setSelectedId(options[0]?.id ?? "");
     setCompanionActive(false);
     setProgress(0);
     setDeviation(false);
     setView("routes");
-  }, [options]);
+    // Reset only when the journey or the set of plans changes, not on unrelated rerenders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journeyKey]);
 
   const selected = useMemo(
     () => options.find((o) => o.id === selectedId) ?? options[0],
@@ -193,7 +197,7 @@ export function ResultsView({
             {editOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setEditOpen(false)} aria-hidden />
-                <div className="absolute right-0 z-20 mt-2 w-[min(92vw,420px)] space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg">
+                <div className="fixed inset-x-3 bottom-3 z-20 max-h-[min(80vh,640px)] space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 shadow-lg sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:mt-2 sm:max-h-[70vh] sm:w-[min(92vw,420px)]">
                   <AssistantBox tone="light" compact onNavigate={() => setEditOpen(false)} />
                   <div className="flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted">
                     <span className="h-px flex-1 bg-slate-200" />
@@ -239,7 +243,7 @@ export function ResultsView({
 
           <div className="space-y-5">
             <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-card">
-              <div className="h-72 w-full sm:h-80">
+              <div className="h-64 w-full min-h-[16rem] sm:h-80">
                 <MapView legs={selected.legs} progress={companionActive ? progress : undefined} />
               </div>
             </div>

@@ -28,6 +28,12 @@ select {
   background: #cfe8ff;
   font: inherit;
   z-index: 0;
+  touch-action: none;
+}
+
+.leaflet-control-attribution {
+  max-width: 55%;
+  font-size: 10px !important;
 }
 
 .leaflet-bar a {
